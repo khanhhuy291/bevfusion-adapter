@@ -281,7 +281,9 @@ class BaseDepthTransform(BaseTransform):
 
 
         for b in range(batch_size):
-            cur_coords = points[b][:, :3]
+            # Projection must not translate the points later used by the LiDAR
+            # encoder (the camera branch runs before that encoder in training).
+            cur_coords = points[b][:, :3].clone()
             cur_img_aug_matrix = img_aug_matrix[b]
             cur_lidar_aug_matrix = lidar_aug_matrix[b]
             cur_lidar2image = lidar2image[b]
@@ -295,7 +297,7 @@ class BaseDepthTransform(BaseTransform):
             cur_coords = cur_lidar2image[:, :3, :3].matmul(cur_coords)
             cur_coords += cur_lidar2image[:, :3, 3].reshape(-1, 3, 1)
             # get 2d coords
-            dist = cur_coords[:, 2, :]
+            dist = cur_coords[:, 2, :].clone()
             cur_coords[:, 2, :] = torch.clamp(cur_coords[:, 2, :], 1e-5, 1e5)
             cur_coords[:, :2, :] /= cur_coords[:, 2:3, :]
 
@@ -308,7 +310,9 @@ class BaseDepthTransform(BaseTransform):
             cur_coords = cur_coords[..., [1, 0]]
 
             on_img = (
-                (cur_coords[..., 0] < self.image_size[0])
+                (dist > 0)
+                & torch.isfinite(cur_coords).all(dim=-1)
+                & (cur_coords[..., 0] < self.image_size[0])
                 & (cur_coords[..., 0] >= 0)
                 & (cur_coords[..., 1] < self.image_size[1])
                 & (cur_coords[..., 1] >= 0)

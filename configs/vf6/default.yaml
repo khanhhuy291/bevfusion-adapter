@@ -1,0 +1,209 @@
+# Standalone VF6 config: inherit only configs/default.yaml, not nuScenes configs.
+dataset_root: data/vf6
+object_classes: [Car, Rider, Pedestrian]
+allow_smoke_test: false
+train_augmentation: true
+point_cloud_range: [-51.2, -51.2, -3.0, 51.2, 51.2, 5.0]
+voxel_size: [0.1, 0.1, 0.2]
+max_epochs: 20
+
+input_modality:
+  use_lidar: true
+  use_camera: false
+  use_radar: false
+
+train_pipeline:
+  - type: LoadPointsFromFile
+    coord_type: LIDAR
+    load_dim: 5
+    use_dim: 5
+    reduce_beams: null
+  - type: LoadAnnotations3D
+    with_bbox_3d: true
+    with_label_3d: true
+    with_attr_label: false
+  - type: GlobalRotScaleTrans
+    resize_lim: [0.95, 1.05]
+    rot_lim: [-0.2, 0.2]
+    trans_lim: 0.1
+    is_train: ${train_augmentation}
+  - type: PointsRangeFilter
+    point_cloud_range: ${point_cloud_range}
+  - type: ObjectRangeFilter
+    point_cloud_range: ${point_cloud_range}
+  - type: PointShuffle
+  - type: DefaultFormatBundle3D
+    classes: ${object_classes}
+  - type: Collect3D
+    keys: [points, gt_bboxes_3d, gt_labels_3d]
+    meta_keys: [lidar_aug_matrix, lidar2ego]
+
+test_pipeline:
+  - type: LoadPointsFromFile
+    coord_type: LIDAR
+    load_dim: 5
+    use_dim: 5
+    reduce_beams: null
+  - type: PointsRangeFilter
+    point_cloud_range: ${point_cloud_range}
+  - type: DefaultFormatBundle3D
+    classes: ${object_classes}
+    with_gt: false
+    with_label: false
+  - type: Collect3D
+    keys: [points]
+    meta_keys: [lidar_aug_matrix, lidar2ego]
+
+data:
+  samples_per_gpu: 1
+  workers_per_gpu: 2
+  train:
+    type: VF6Dataset
+    dataset_root: ${dataset_root}
+    ann_file: ${dataset_root + "/vf6_infos_train.pkl"}
+    pipeline: ${train_pipeline}
+    object_classes: ${object_classes}
+    modality: ${input_modality}
+    point_cloud_range: ${point_cloud_range}
+    min_lidar_points: 1
+    allow_smoke_test: ${allow_smoke_test}
+    test_mode: false
+    filter_empty_gt: true
+  val:
+    type: VF6Dataset
+    dataset_root: ${dataset_root}
+    ann_file: ${dataset_root + "/vf6_infos_val.pkl"}
+    pipeline: ${test_pipeline}
+    object_classes: ${object_classes}
+    modality: ${input_modality}
+    point_cloud_range: ${point_cloud_range}
+    min_lidar_points: 1
+    allow_smoke_test: ${allow_smoke_test}
+    test_mode: true
+  test:
+    type: VF6Dataset
+    dataset_root: ${dataset_root}
+    ann_file: ${dataset_root + "/vf6_infos_val.pkl"}
+    pipeline: ${test_pipeline}
+    object_classes: ${object_classes}
+    modality: ${input_modality}
+    point_cloud_range: ${point_cloud_range}
+    min_lidar_points: 1
+    allow_smoke_test: ${allow_smoke_test}
+    test_mode: true
+
+model:
+  type: BEVFusion
+  encoders:
+    camera: null
+    radar: null
+    lidar:
+      voxelize:
+        max_num_points: 10
+        point_cloud_range: ${point_cloud_range}
+        voxel_size: ${voxel_size}
+        max_voxels: [90000, 120000]
+      backbone:
+        type: SparseEncoder
+        in_channels: 5
+        sparse_shape: [1024, 1024, 41]
+        output_channels: 128
+        order: [conv, norm, act]
+        encoder_channels: [[16, 16, 32], [32, 32, 64], [64, 64, 128], [128, 128]]
+        encoder_paddings: [[0, 0, 1], [0, 0, 1], [0, 0, [1, 1, 0]], [0, 0]]
+        block_type: basicblock
+  fuser: null
+  decoder:
+    backbone:
+      type: SECOND
+      in_channels: 256
+      out_channels: [128, 256]
+      layer_nums: [5, 5]
+      layer_strides: [1, 2]
+      norm_cfg: {type: BN, eps: 0.001, momentum: 0.01}
+      conv_cfg: {type: Conv2d, bias: false}
+    neck:
+      type: SECONDFPN
+      in_channels: [128, 256]
+      out_channels: [256, 256]
+      upsample_strides: [1, 2]
+      norm_cfg: {type: BN, eps: 0.001, momentum: 0.01}
+      upsample_cfg: {type: deconv, bias: false}
+      use_conv_for_no_stride: true
+  heads:
+    object:
+      type: TransFusionHead
+      num_proposals: 200
+      auxiliary: true
+      in_channels: 512
+      hidden_channel: 128
+      num_classes: ${len(object_classes)}
+      num_decoder_layers: 1
+      num_heads: 8
+      nms_kernel_size: 3
+      ffn_channel: 256
+      dropout: 0.1
+      bn_momentum: 0.1
+      activation: relu
+      train_cfg:
+        dataset: VF6
+        point_cloud_range: ${point_cloud_range}
+        grid_size: [1024, 1024, 40]
+        voxel_size: ${voxel_size}
+        out_size_factor: 8
+        gaussian_overlap: 0.1
+        min_radius: 2
+        pos_weight: -1
+        code_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        assigner:
+          type: HungarianAssigner3D
+          iou_calculator: {type: BboxOverlaps3D, coordinate: lidar}
+          cls_cost: {type: FocalLossCost, gamma: 2.0, alpha: 0.25, weight: 0.15}
+          reg_cost: {type: BBoxBEVL1Cost, weight: 0.25}
+          iou_cost: {type: IoU3DCost, weight: 0.25}
+      test_cfg:
+        # Avoid nuScenes' hardcoded class indices 8/9 in TransFusionHead.
+        dataset: VF6
+        grid_size: [1024, 1024, 40]
+        out_size_factor: 8
+        voxel_size: ${voxel_size[:2]}
+        pc_range: ${point_cloud_range[:2]}
+        nms_type: null
+      common_heads:
+        center: [2, 2]
+        height: [1, 2]
+        dim: [3, 2]
+        rot: [2, 2]
+      bbox_coder:
+        type: TransFusionBBoxCoder
+        pc_range: ${point_cloud_range[:2]}
+        post_center_range: [-61.2, -61.2, -10.0, 61.2, 61.2, 10.0]
+        score_threshold: 0.0
+        out_size_factor: 8
+        voxel_size: ${voxel_size[:2]}
+        # No invented object velocities: labels contain no velocity targets.
+        code_size: 8
+      loss_cls:
+        type: FocalLoss
+        use_sigmoid: true
+        gamma: 2.0
+        alpha: 0.25
+        reduction: mean
+        loss_weight: 1.0
+      loss_heatmap: {type: GaussianFocalLoss, reduction: mean, loss_weight: 1.0}
+      loss_bbox: {type: L1Loss, reduction: mean, loss_weight: 0.25}
+
+optimizer: {type: AdamW, lr: 0.0001, weight_decay: 0.01}
+optimizer_config:
+  grad_clip: {max_norm: 35, norm_type: 2}
+lr_config:
+  policy: CosineAnnealing
+  min_lr_ratio: 0.1
+  warmup: linear
+  warmup_iters: 100
+  warmup_ratio: 0.1
+momentum_config: null
+evaluation:
+  interval: 1
+  metric: bbox
+  iou_threshold: 0.5

@@ -136,3 +136,12 @@ runs/*
 # torch hipify generated files
 *_hip.*
 *.hip
+
+VF6
+
+# Keep VF6 configs tracked even on case-insensitive filesystems.
+!configs/vf6/
+!configs/vf6/**
+
+docs
+

@@ -1,0 +1,13 @@
+# Two-epoch FP32 integration check with genuinely separate train/val sessions.
+# Inherits ../default.yaml and ../../default.yaml through torchpack.
+dataset_root: data/vf6-fusion
+allow_smoke_test: false
+train_augmentation: false
+max_epochs: 2
+fp16: null
+data:
+  workers_per_gpu: 0
+lr_config:
+  warmup_iters: 1
+log_config:
+  interval: 1

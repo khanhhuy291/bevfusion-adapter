@@ -222,3 +222,14 @@ If BEVFusion is useful or relevant to your research, please kindly recognize our
 }
 ```
 # bevfusion-adapter
+
+Hướng dẫn chuẩn bị dữ liệu VF6, chia train/val từ `.txt` và chạy nhánh LiDAR:
+[VF6 adapter](docs/vf6.md).
+
+Camera + LiDAR VF6 và các bước kiểm tra end-to-end trên GPU:
+[VF6 fusion](docs/vf6-fusion.md).
+
+Giải thích luồng dữ liệu theo từng file và hàm cho đồng nghiệp:
+[Luồng code VF6](docs/vf6-data-flow.md).
+Hướng dẫn thao tác kiểm thử và training:
+[Word](docs/vf6-test-train-guide.docx), [bản nguồn Markdown](docs/vf6-runbook.md).

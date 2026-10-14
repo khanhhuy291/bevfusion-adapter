@@ -1,0 +1,11 @@
+# Intentionally overlapping train/val. Only for data/model smoke or overfit tests.
+dataset_root: data/vf6-smoke
+allow_smoke_test: true
+train_augmentation: false
+max_epochs: 2
+data:
+  workers_per_gpu: 0
+lr_config:
+  warmup_iters: 1
+log_config:
+  interval: 1
