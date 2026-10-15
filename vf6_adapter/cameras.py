@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 
 import numpy as np
+from pyquaternion import Quaternion
 
 from .converter import load_extrinsics, timestamp_ns, validate_rigid_transform
 
@@ -13,16 +14,32 @@ DEFAULT_CAMERAS = ("CAM_P_F", "CAM_P_FL", "CAM_P_FR", "CAM_P_L",
 
 
 def camera_matrices(camera):
-    """Exported point coordinates ARE ego coordinates; no raw LiDAR RT here."""
-    ego_to_camera = validate_rigid_transform(camera["ego2camera"], "ego2camera").astype(np.float32)
-    camera_to_ego = np.linalg.inv(ego_to_camera).astype(np.float32)
+    """Offline projection from the same sensor2lidar fields as NuScenesDataset.
+
+    Training uses the inherited loader, not this helper. Exported LiDAR axes
+    coincide with ego axes, so sensor2lidar and sensor2ego describe the same RT.
+    """
+    camera_to_lidar = np.eye(4, dtype=np.float32)
+    camera_to_lidar[:3, :3] = camera["sensor2lidar_rotation"]
+    camera_to_lidar[:3, 3] = camera["sensor2lidar_translation"]
+    validate_rigid_transform(camera_to_lidar, "sensor2lidar")
+    # Match the stock loader's 3x3 inverse and row-vector translation arithmetic
+    # exactly, including float32 rounding before K @ RT.
+    inverse_rotation = np.linalg.inv(camera["sensor2lidar_rotation"])
+    inverse_translation = camera["sensor2lidar_translation"] @ inverse_rotation.T
+    ego_to_camera = np.eye(4, dtype=np.float32)
+    ego_to_camera[:3, :3] = inverse_rotation
+    ego_to_camera[:3, 3] = -inverse_translation
+    camera_to_ego = np.eye(4, dtype=np.float32)
+    camera_to_ego[:3, :3] = Quaternion(camera["sensor2ego_rotation"]).rotation_matrix
+    camera_to_ego[:3, 3] = camera["sensor2ego_translation"]
     intrinsic = np.eye(4, dtype=np.float32)
     matrix = np.asarray(camera["cam_intrinsic"], dtype=np.float32)
     if matrix.shape != (3, 3) or not np.isfinite(matrix).all() or matrix[0, 0] <= 0 or matrix[1, 1] <= 0:
         raise ValueError("Invalid rectified camera intrinsics")
     intrinsic[:3, :3] = matrix
     return dict(camera_intrinsics=intrinsic, camera2ego=camera_to_ego,
-                camera2lidar=camera_to_ego.copy(), lidar2camera=ego_to_camera,
+                camera2lidar=camera_to_lidar, lidar2camera=ego_to_camera,
                 lidar2image=intrinsic @ ego_to_camera)
 
 
@@ -64,8 +81,14 @@ class CameraProcessor:
             new_k, _ = cv2.getOptimalNewCameraMatrix(k, d, source_size, 0, self.size)
             if not np.isfinite(new_k).all() or new_k[0, 0] <= 0 or new_k[1, 1] <= 0:
                 raise ValueError("{}: failed to produce rectified intrinsics".format(name))
+            camera_to_ego = np.linalg.inv(transform)
+            quaternion = Quaternion(matrix=camera_to_ego[:3, :3], atol=1e-3, rtol=1e-3).normalised
             self.calibrations[name] = dict(
                 cam_intrinsic=new_k.astype(np.float32), ego2camera=transform.astype(np.float32),
+                sensor2lidar_rotation=quaternion.rotation_matrix.astype(np.float32),
+                sensor2lidar_translation=camera_to_ego[:3, 3].astype(np.float32),
+                sensor2ego_rotation=quaternion.elements.tolist(),
+                sensor2ego_translation=camera_to_ego[:3, 3].tolist(),
                 original_intrinsics=k, original_distortion=d,
                 source_image_size=source_size, image_size=self.size,
                 image_mode="rectified_pinhole", calibration_profile=profile["profile"],
@@ -95,6 +118,7 @@ class CameraProcessor:
             source = files[best]
             relative = Path("images") / self.clip["session"] / self.clip["clip"] / name / (source.stem + ".jpg")
             cameras[name] = dict(self.calibrations[name], data_path=relative.as_posix(),
+                                 timestamp=times[best] // 1000,
                                  raw_data_path=str(source.resolve()), timestamp_ns=times[best], time_offset_ns=offset)
         return cameras
 

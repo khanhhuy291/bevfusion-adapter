@@ -1,4 +1,4 @@
-"""Convert labelled LIDAR_TOP and optional cameras without nuScenes tables."""
+"""Export VF6 payloads and infos consumed by this checkout's NuScenesDataset."""
 
 import json
 import pickle
@@ -9,8 +9,8 @@ from pathlib import Path
 
 import numpy as np
 
-from . import CLASSES, INFO_VERSION
-from .geometry import transform_points
+from . import CLASSES, INFO_VERSION, DATASET_VERSION
+from .geometry import transform_points, to_repo_boxes
 
 SESSION_PATTERN = re.compile(r"\d{8}_\d{4}_VF6_\d{2}_\d+_\d+")
 CLIP_PATTERN = re.compile(r"\d+_\d+_\d+")
@@ -248,11 +248,23 @@ def create_vf6_infos(root_path, out_dir, train_split=None, val_split=None,
                 raise FileNotFoundError("Label has no matching LIDAR_TOP file: {}".format(label))
             frame = dict(
                 token=key + "/" + label.stem, session_id=clip["session"], clip_id=clip["clip"],
-                timestamp_ns=stamp, timestamp=stamp / 1e9,
+                # nuScenes info timestamps are integer microseconds. Keep ns
+                # separately for exact raw matching and synchronization audits.
+                timestamp_ns=stamp, timestamp=stamp // 1000,
+                sweeps=[],
+                # The exported point file already uses the ego axes.
+                lidar2ego_rotation=[1., 0., 0., 0.], lidar2ego_translation=[0., 0., 0.],
+                # Structural placeholder ONLY: no measured global pose is
+                # claimed. Single-frame detection never consumes ego2global.
+                ego2global_rotation=[1., 0., 0., 0.], ego2global_translation=[0., 0., 0.],
                 raw_lidar_path=str(lidar), label_path=str(label),
                 raw_lidar2ego=transform.astype(np.float32), calibration=profile,
                 **read_labels(label, classes),
             )
+            # Normalize once at export. The inherited get_ann_info() consumes
+            # bottom-center/lwh/CW boxes without another VF6 conversion.
+            frame["gt_boxes"] = to_repo_boxes(frame["gt_boxes"])
+            frame["valid_flag"] = frame["num_lidar_pts"] > 0
             if camera_names is not None:
                 frame["cams"] = camera_processors[key].match(stamp)
             frames.append(frame)
@@ -294,8 +306,12 @@ def create_vf6_infos(root_path, out_dir, train_split=None, val_split=None,
                 print("Converted {} unique labelled frames".format(len(converted)), flush=True)
 
     metadata = dict(
-        dataset="VF6", info_version=INFO_VERSION, classes=list(classes), coordinate_frame="ego",
-        box_convention="center_lwh_ccw", point_features=["x", "y", "z", "intensity", "sweep_time_lag"],
+        dataset="VF6", version=DATASET_VERSION, info_version=INFO_VERSION,
+        schema="bevfusion_nuscenes_infos", classes=list(classes), coordinate_frame="ego",
+        box_convention="bottom_lwh_cw", timestamp_unit="microseconds",
+        global_pose_status="unavailable_identity_placeholder",
+        global_pose_usage="single_frame_detection_only; no global evaluation, maps or temporal alignment",
+        point_features=["x", "y", "z", "intensity", "sweep_time_lag"],
         raw_root=str(root), smoke_test=bool(smoke_test), single_sweep=True,
         calibration_convention="LIDAR_TOP matrix interpreted as lidar_to_ego; verified on the supplied VF6_01 clip",
         label_convention="Columns 9 and 11 preserved; column 10 interpreted as annotated LiDAR point count",

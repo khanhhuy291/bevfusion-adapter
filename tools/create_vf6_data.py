@@ -1,4 +1,4 @@
-"""Prepare VF6 LiDAR and optional camera data using train/val text manifests."""
+"""Export VF6 NuScenes-info v2 and LiDAR/camera payloads from raw and split manifests."""
 
 import argparse
 import json

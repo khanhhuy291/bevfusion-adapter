@@ -143,5 +143,9 @@ VF6
 !configs/vf6/
 !configs/vf6/**
 
-docs
+# Word lock files and local document render caches.
+docs/~$*
+docs/.DS_Store
+docs/**/__pycache__/
 
+docs

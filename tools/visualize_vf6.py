@@ -12,6 +12,8 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from vf6_adapter.cameras import camera_matrices
+from vf6_adapter.geometry import from_repo_boxes
+from vf6_adapter.infos import validate_metadata
 
 
 def box_corners(box):
@@ -26,6 +28,7 @@ def render(root, output, split="train", index=0):
     root = Path(root)
     with (root / ("vf6_infos_" + split + ".pkl")).open("rb") as stream:
         data = pickle.load(stream)
+    validate_metadata(data["metadata"])
     frame = data["infos"][index]
     names = data["metadata"].get("camera_names", [])
     if not names:
@@ -55,7 +58,7 @@ def render(root, output, split="train", index=0):
                    & (pixels[:, 1] >= 0) & (pixels[:, 1] < source_height))
         for pixel in pixels[visible, :2].astype(int):
             cv2.circle(image, tuple(pixel), 1, (255, 220, 0), -1)
-        for box, label in zip(frame["gt_boxes"], frame["gt_names"]):
+        for box, label in zip(from_repo_boxes(frame["gt_boxes"]), frame["gt_names"]):
             corners = box_corners(box)
             coordinates = corners @ projection[:3, :3].T + projection[:3, 3]
             if (coordinates[:, 2] < .5).any():

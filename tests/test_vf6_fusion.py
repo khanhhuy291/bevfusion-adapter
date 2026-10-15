@@ -179,30 +179,6 @@ def test_invalid_camera_intrinsics_are_rejected(camera_dataset, tmp_path):
         create_vf6_infos(camera_dataset, tmp_path / "fusion", smoke_test=True, camera_names=CAMERAS)
 
 
-def test_dataset_camera_fields_match_exported_ego_frame(camera_dataset, tmp_path):
-    from types import SimpleNamespace
-
-    output = tmp_path / "fusion"
-    create_vf6_infos(camera_dataset, output, smoke_test=True, camera_names=CAMERAS, camera_size=(32, 24))
-    with (output / "vf6_infos_train.pkl").open("rb") as stream:
-        info = pickle.load(stream)["infos"][0]
-    path = Path(__file__).resolve().parents[1] / "mmdet3d/datasets/vf6_dataset.py"
-    cls = next(node for node in ast.parse(path.read_text()).body if isinstance(node, ast.ClassDef))
-    method = next(node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name == "get_data_info")
-    namespace = dict(np=np, Path=Path, camera_matrices=camera_matrices)
-    exec(compile(ast.Module(body=[method], type_ignores=[]), str(path), "exec"), namespace)
-    dataset = SimpleNamespace(data_infos=[info], dataset_root=str(output), test_mode=True,
-                              modality=dict(use_camera=True), camera_names=list(CAMERAS))
-    result = namespace["get_data_info"](dataset, 0)
-    assert len(result["image_paths"]) == 2
-    assert all(Path(path).is_file() for path in result["image_paths"])
-    np.testing.assert_array_equal(result["lidar2ego"], np.eye(4))
-    for index in range(2):
-        np.testing.assert_allclose(result["camera2lidar"][index] @ result["lidar2camera"][index], np.eye(4), atol=1e-5)
-        np.testing.assert_array_equal(result["lidar2image"][index],
-                                      result["camera_intrinsics"][index] @ result["lidar2camera"][index])
-
-
 def test_object_range_filter_supports_numpy_without_np_bool():
     torch = pytest.importorskip("torch")
 

@@ -56,6 +56,11 @@ test_pipeline:
     rot_lim: [0.0, 0.0]
     rand_flip: false
     is_train: false
+  - type: GlobalRotScaleTrans
+    resize_lim: [1.0, 1.0]
+    rot_lim: [0.0, 0.0]
+    trans_lim: 0.0
+    is_train: false
   - type: PointsRangeFilter
     point_cloud_range: ${point_cloud_range}
   - type: ImageNormalize

@@ -166,7 +166,11 @@ def test_real_laz_conversion_and_explicit_split_isolation(raw_dataset, tmp_path)
     np.testing.assert_array_equal(points[:, 4], 0)
     assert data["metadata"]["smoke_test"] is False
     assert frame["session_id"] == SESSION_A
-    assert frame["gt_boxes"][0, 2] == 2  # Metadata keeps center; Dataset converts.
+    np.testing.assert_allclose(frame["gt_boxes"][0], [1, 0, 1, 4, 2, 2, -.6])
+    assert frame["timestamp"] == timestamp_ns(STAMP) // 1000
+    assert frame["sweeps"] == []
+    assert frame["valid_flag"].tolist() == [True]
+    assert data["metadata"]["box_convention"] == "bottom_lwh_cw"
     assert len(list(raw_dataset.rglob("*.npy"))) == 0
     with (output / "vf6_infos_val.pkl").open("rb") as stream:
         assert pickle.load(stream)["infos"][0]["session_id"] == SESSION_B
@@ -283,6 +287,10 @@ def test_config_resolves_without_nuscenes_targets(smoke, fusion, debug):
     for split in ["train", "val", "test"]:
         dataset = config["data"][split]
         assert dataset["allow_smoke_test"] is smoke
+        assert dataset["with_velocity"] is False
+        assert dataset["use_valid_flag"] is True
+        assert any(stage["type"] == "GlobalRotScaleTrans" and stage["is_train"] is False
+                   for stage in config["test_pipeline"])
         expected = "data/vf6" + ("-fusion" if fusion else "") + ("-smoke" if smoke else "") + "/"
         assert dataset["ann_file"].startswith(expected)
         assert dataset["modality"]["use_camera"] is fusion

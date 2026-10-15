@@ -1,6 +1,8 @@
 """Geometry in VF6's ego frame: center xyz, length/width/height, CCW yaw.
 
-This checkout's LiDARInstance3DBoxes uses bottom centers and CLOCKWISE yaw.
+The converter normalizes raw boxes to bottom centers and CLOCKWISE yaw
+for this checkout's NuScenesDataset/LiDARInstance3DBoxes. The evaluator uses
+center/CCW geometry after converting both GT and predictions back.
 Do not copy conversion rules from newer MMDetection3D versions.
 """
 

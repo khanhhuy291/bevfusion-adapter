@@ -11,7 +11,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from vf6_adapter import INFO_VERSION
+from vf6_adapter.infos import validate_metadata, validate_info
 from vf6_adapter.evaluation import evaluate_detection
 from vf6_adapter.geometry import from_repo_boxes, to_repo_boxes
 from vf6_adapter.cameras import camera_matrices
@@ -22,10 +22,9 @@ def check_export(root, split):
     with (root / ("vf6_infos_" + split + ".pkl")).open("rb") as stream:
         data = pickle.load(stream)
     metadata, infos = data["metadata"], data["infos"]
-    if (metadata.get("dataset") != "VF6" or metadata.get("info_version") != INFO_VERSION
-            or metadata.get("box_convention") != "center_lwh_ccw"
-            or metadata.get("coordinate_frame") != "ego" or not infos):
-        raise ValueError("Invalid or empty VF6 export")
+    validate_metadata(metadata)
+    if not infos:
+        raise ValueError("Empty VF6 export")
     classes = metadata["classes"]
     if len({frame["token"] for frame in infos}) != len(infos):
         raise ValueError("Duplicate sample IDs")
@@ -35,6 +34,7 @@ def check_export(root, split):
     max_camera_dt_ms = 0.0
     # Validate all exported frames, then exercise evaluator on three samples.
     for info in infos:
+        validate_info(info, metadata)
         points = np.load(root / info["lidar_path"], mmap_mode="r", allow_pickle=False)
         if points.ndim != 2 or points.shape[1] != 5 or points.dtype != np.float32:
             raise ValueError("Expected float32 points with shape (N,5): {}".format(info["lidar_path"]))
@@ -48,7 +48,7 @@ def check_export(root, split):
         for name in ("label_attributes", "num_lidar_pts", "track_ids"):
             if np.asarray(info[name]).shape != (len(boxes),):
                 raise ValueError("{} does not align with boxes".format(name))
-        if not np.allclose(from_repo_boxes(to_repo_boxes(boxes)), boxes, atol=1e-5):
+        if not np.allclose(to_repo_boxes(from_repo_boxes(boxes)), boxes, atol=1e-5):
             raise ValueError("Box center/yaw conversion does not round trip")
         point_count += len(points)
         annotation_count += len(boxes)
@@ -78,7 +78,7 @@ def check_export(root, split):
     for index in sorted({0, len(infos) // 2, len(infos) - 1}):
         frame = infos[index]
         mask = frame["num_lidar_pts"] >= 1
-        boxes = frame["gt_boxes"][mask]
+        boxes = from_repo_boxes(frame["gt_boxes"][mask])
         labels = np.asarray([classes.index(name) for name in frame["gt_names"][mask]], dtype=np.int64)
         gt.append(dict(boxes=boxes, labels=labels))
         perfect.append(dict(boxes=from_repo_boxes(to_repo_boxes(boxes)), labels=labels, scores=np.ones(len(boxes))))
@@ -105,7 +105,10 @@ def check_runtime(config_path, data_root, split, forward=False, steps=1, checkpo
     dataset = build_dataset(cfg.data[split])
     sample = dataset[0]
     batch = collate([sample], samples_per_gpu=1)
-    summary = dict(dataset_samples=len(dataset), batch_keys=sorted(batch), pipeline="passed")
+    summary = dict(dataset_samples=len(dataset), batch_keys=sorted(batch), pipeline="passed",
+                   info_schema=dataset.metadata["schema"],
+                   inherited_loader="NuScenesDataset.get_data_info/get_ann_info",
+                   global_pose_status=dataset.metadata["global_pose_status"])
     if "img" in sample:
         summary["sample_image_shape"] = list(sample["img"].data.shape)
         for key in ("camera_intrinsics", "camera2ego", "camera2lidar", "lidar2camera", "lidar2image", "img_aug_matrix"):

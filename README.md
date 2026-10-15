@@ -223,7 +223,7 @@ If BEVFusion is useful or relevant to your research, please kindly recognize our
 ```
 # bevfusion-adapter
 
-Hướng dẫn chuẩn bị dữ liệu VF6, chia train/val từ `.txt` và chạy nhánh LiDAR:
+VF6 hiện xuất PKL NuScenes-info v2 và dùng `VF6Dataset(NuScenesDataset)`. Box chuẩn hóa trong converter; loader gốc tạo sample và annotation. PKL v1 cần xuất lại từ raw. Hướng dẫn chia train/val từ `.txt` và chạy nhánh LiDAR:
 [VF6 adapter](docs/vf6.md).
 
 Camera + LiDAR VF6 và các bước kiểm tra end-to-end trên GPU:

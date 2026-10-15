@@ -1,4 +1,4 @@
-# Standalone VF6 config: inherit only configs/default.yaml, not nuScenes configs.
+# VF6 NuScenes-info v2: thin NuScenesDataset subclass, three classes, no velocity.
 dataset_root: data/vf6
 object_classes: [Car, Rider, Pedestrian]
 allow_smoke_test: false
@@ -44,6 +44,11 @@ test_pipeline:
     load_dim: 5
     use_dim: 5
     reduce_beams: null
+  - type: GlobalRotScaleTrans
+    resize_lim: [1.0, 1.0]
+    rot_lim: [0.0, 0.0]
+    trans_lim: 0.0
+    is_train: false
   - type: PointsRangeFilter
     point_cloud_range: ${point_cloud_range}
   - type: DefaultFormatBundle3D
@@ -59,6 +64,8 @@ data:
   workers_per_gpu: 2
   train:
     type: VF6Dataset
+    with_velocity: false
+    use_valid_flag: true
     dataset_root: ${dataset_root}
     ann_file: ${dataset_root + "/vf6_infos_train.pkl"}
     pipeline: ${train_pipeline}
@@ -71,6 +78,8 @@ data:
     filter_empty_gt: true
   val:
     type: VF6Dataset
+    with_velocity: false
+    use_valid_flag: true
     dataset_root: ${dataset_root}
     ann_file: ${dataset_root + "/vf6_infos_val.pkl"}
     pipeline: ${test_pipeline}
@@ -82,6 +91,8 @@ data:
     test_mode: true
   test:
     type: VF6Dataset
+    with_velocity: false
+    use_valid_flag: true
     dataset_root: ${dataset_root}
     ann_file: ${dataset_root + "/vf6_infos_val.pkl"}
     pipeline: ${test_pipeline}
