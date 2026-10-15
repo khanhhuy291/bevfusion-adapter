@@ -12,6 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 WORKDIR /workspace/bevfusion-adapter
 
 COPY . .
+RUN mkdir -p data checkpoint runs
 
 # Compile the repository's CUDA extensions specifically for sm_120.  Building
 # in the image makes incompatibilities explicit before an inference container

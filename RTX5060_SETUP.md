@@ -52,7 +52,9 @@ Kết quả phải có CUDA `12.8` và `sm_120`.
 ```bash
 cd ~/bevfusion-adapter
 docker run --rm --gpus all --shm-size=8g \
-  -v "$PWD:/workspace/bevfusion-adapter" \
+  -v "$PWD/data:/workspace/bevfusion-adapter/data:ro" \
+  -v "$PWD/checkpoint:/workspace/bevfusion-adapter/checkpoint:ro" \
+  -v "$PWD/runs:/workspace/bevfusion-adapter/runs" \
   -w /workspace/bevfusion-adapter \
   bevfusion:rtx5060 \
   python tools/infer_pcd.py \
