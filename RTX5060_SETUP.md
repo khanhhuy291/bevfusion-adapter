@@ -42,7 +42,7 @@ phút.
 
 ```bash
 docker run --rm --gpus all bevfusion:rtx5060 \
-  python -c "import torch; print(torch.__version__, torch.version.cuda); print(torch.cuda.get_device_name(0)); print(torch.cuda.get_arch_list()); assert 'sm_120' in torch.cuda.get_arch_list()"
+  python -c "import torch; assert torch.cuda.is_available(); print(torch.__version__, torch.version.cuda); print(torch.cuda.get_device_name(0)); print(torch.cuda.get_arch_list()); assert 'sm_120' in torch.cuda.get_arch_list()"
 ```
 
 Kết quả phải có CUDA `12.8` và `sm_120`.

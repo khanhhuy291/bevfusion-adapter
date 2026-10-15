@@ -17,6 +17,8 @@ COPY . .
 # in the image makes incompatibilities explicit before an inference container
 # is started.
 RUN python setup.py develop
-RUN python -c "import torch, mmcv, mmdet, mmdet3d; assert 'sm_120' in torch.cuda.get_arch_list(); print(torch.__version__, torch.version.cuda, mmcv.__version__, mmdet.__version__)"
+# `docker build` does not expose the GPU.  Verify imports here; verify the
+# actual sm_120 device after build with `docker run --gpus all`.
+RUN python -c "import torch, mmcv, mmdet, mmdet3d; print(torch.__version__, torch.version.cuda, mmcv.__version__, mmdet.__version__)"
 
 CMD ["/bin/bash"]
