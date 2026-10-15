@@ -21,7 +21,7 @@
 
 #define CHECK_CONTIGUOUS(x)                                          \
   do {                                                               \
-    AT_ASSERT(x.is_contiguous(), #x " must be a contiguous tensor"); \
+    TORCH_CHECK(x.is_contiguous(), #x " must be a contiguous tensor"); \
   } while (0)
 
 #define CUDA_CHECK_ERRORS()                                           \

@@ -28,12 +28,15 @@ Từ thư mục repository:
 
 ```bash
 cd ~/bevfusion-adapter
+# Cần có image base do team đã xác thực: bevfusion-blackwell:base.
+docker build -f docker/Dockerfile.rtx5060-deps -t bevfusion-rtx5060-deps:latest .
 docker build -f docker/Dockerfile.rtx5060 -t bevfusion:rtx5060 .
 ```
 
-Build này cần Internet để tải image và Python packages, đồng thời compile
-`mmcv-full` cùng CUDA extensions. Laptop 8 GB VRAM là đủ cho **single-frame
-inference**, nhưng compile sẽ tốn RAM CPU và có thể mất nhiều phút.
+Image dependency dùng `mmcv-full 1.7.2` build source + `mmdet 2.28.2`, phù hợp
+với API MMDetection 2.x của repository. Laptop 8 GB VRAM là đủ cho
+**single-frame inference**, nhưng compile sẽ tốn RAM CPU và có thể mất nhiều
+phút.
 
 ## 3. Xác thực CUDA trong container
 

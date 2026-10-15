@@ -1,29 +1,15 @@
-# RTX 50-series / Blackwell build image for this legacy BEVFusion fork.
-# PyTorch >= 2.7 with the cu128 wheel/runtime is required for native sm_120.
-FROM pytorch/pytorch:2.7.1-cuda12.8-cudnn9-devel
+# Runtime image for RTX 50-series / Blackwell.  Build
+# docker/Dockerfile.rtx5060-deps first, then tag it as
+# bevfusion-rtx5060-deps:latest.
+FROM bevfusion-rtx5060-deps:latest
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    PIP_NO_CACHE_DIR=1 \
     FORCE_CUDA=1 \
     TORCH_CUDA_ARCH_LIST=12.0 \
     MAX_JOBS=2 \
     CUDA_HOME=/usr/local/cuda
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential git libgl1 libglib2.0-0 libopenmpi-dev openmpi-bin \
-      && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /workspace/bevfusion-adapter
-
-# Keep the OpenMMLab 1.x API expected by this repository.  It is built from
-# source because no prebuilt mmcv-full 1.x wheel exists for torch 2.7/cu128.
-RUN python -m pip install --upgrade pip setuptools wheel && \
-    python -m pip install \
-      'numpy<2' Pillow==8.4.0 tqdm torchpack nuscenes-devkit \
-      mpi4py==3.0.3 numba==0.61.2 'yapf<0.41' && \
-    python -m pip install --no-build-isolation --no-binary mmcv-full \
-      mmcv-full==1.4.0 && \
-    python -m pip install mmdet==2.20.0
 
 COPY . .
 

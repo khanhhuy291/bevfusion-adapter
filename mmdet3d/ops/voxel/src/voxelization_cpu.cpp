@@ -112,7 +112,7 @@ int hard_voxelize_cpu(const at::Tensor& points, at::Tensor& voxels,
                       const int NDim = 3) {
   // current version tooks about 0.02s_0.03s for one frame on cpu
   // check device
-  AT_ASSERTM(points.device().is_cpu(), "points must be a CPU tensor");
+  TORCH_CHECK(points.device().is_cpu(), "points must be a CPU tensor");
 
   std::vector<int> grid_size(NDim);
   const int num_points = points.size(0);
@@ -148,7 +148,7 @@ void dynamic_voxelize_cpu(const at::Tensor& points, at::Tensor& coors,
                           const std::vector<float> coors_range,
                           const int NDim = 3) {
   // check device
-  AT_ASSERTM(points.device().is_cpu(), "points must be a CPU tensor");
+  TORCH_CHECK(points.device().is_cpu(), "points must be a CPU tensor");
 
   std::vector<int> grid_size(NDim);
   const int num_points = points.size(0);

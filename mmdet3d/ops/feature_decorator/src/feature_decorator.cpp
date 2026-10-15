@@ -41,5 +41,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
         "feature_decorator_forward");
 }
 
-static auto registry =
-    torch::RegisterOperators("feature_decorator_ext::feature_decorator_forward", &feature_decorator_forward);
+// The Python wrapper calls the pybind symbol directly.  The legacy
+// torch::RegisterOperators overload used here was removed by newer PyTorch
+// releases, so registering it a second time is both unnecessary and prevents
+// building this extension with the CUDA 12.8 / PyTorch 2.7 toolchain.

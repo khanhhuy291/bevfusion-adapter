@@ -72,6 +72,12 @@ if __name__ == "__main__":
         license="Apache License 2.0",
         ext_modules=[
             make_cuda_ext(
+                name="feature_decorator_ext",
+                module="mmdet3d.ops.feature_decorator",
+                sources=["src/feature_decorator.cpp"],
+                sources_cuda=["src/feature_decorator_cuda.cu"],
+            ),
+            make_cuda_ext(
                 name="sparse_conv_ext",
                 module="mmdet3d.ops.spconv",
                 extra_include_path=[
