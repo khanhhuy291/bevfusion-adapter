@@ -38,6 +38,9 @@ với API MMDetection 2.x của repository. Laptop 8 GB VRAM là đủ cho
 **single-frame inference**, nhưng compile sẽ tốn RAM CPU và có thể mất nhiều
 phút.
 
+Sau khi thay đổi code trong `mmdet3d/` hoặc `tools/`, chỉ cần chạy lại lệnh
+build image thứ hai; dependency image được Docker cache lại.
+
 ## 3. Xác thực CUDA trong container
 
 ```bash
