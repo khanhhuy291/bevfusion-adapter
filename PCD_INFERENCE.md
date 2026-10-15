@@ -17,9 +17,11 @@ Phép đổi được áp dụng theo `xyz_out = R @ xyz_in + t`.
 
 ## Kiểm tra môi trường GPU
 
-Repository dùng legacy stack trong README/Dockerfile: Python 3.8, PyTorch
+Repository gốc dùng legacy stack trong README/Dockerfile: Python 3.8, PyTorch
 1.10.1 + CUDA 11.3, MMCV/MMCV-full 1.4.0, MMDetection 2.20.0, torchpack và
-nuscenes-devkit. Sau khi cài và compile CUDA extensions:
+nuscenes-devkit. Với RTX 50-series (`sm_120`), dùng hướng dẫn riêng tại
+[`RTX5060_SETUP.md`](RTX5060_SETUP.md); không dùng Dockerfile legacy. Sau khi
+cài và compile CUDA extensions:
 
 ```bash
 python setup.py develop

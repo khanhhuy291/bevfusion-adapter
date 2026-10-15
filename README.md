@@ -86,6 +86,11 @@ We also provide a [Dockerfile](docker/Dockerfile) to ease environment setup. To 
 cd docker && docker build . -t bevfusion
 ```
 
+For RTX 50-series / Blackwell GPUs (`sm_120`), use
+[`docker/Dockerfile.rtx5060`](docker/Dockerfile.rtx5060) and follow
+[`RTX5060_SETUP.md`](RTX5060_SETUP.md). The legacy Dockerfile above cannot
+build native kernels for that GPU generation.
+
 We can then run the docker with the following command:
 
 ```bash

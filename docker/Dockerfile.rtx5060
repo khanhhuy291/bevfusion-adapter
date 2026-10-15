@@ -1,0 +1,36 @@
+# RTX 50-series / Blackwell build image for this legacy BEVFusion fork.
+# PyTorch >= 2.7 with the cu128 wheel/runtime is required for native sm_120.
+FROM pytorch/pytorch:2.7.1-cuda12.8-cudnn9-devel
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    FORCE_CUDA=1 \
+    TORCH_CUDA_ARCH_LIST=12.0 \
+    MAX_JOBS=2 \
+    CUDA_HOME=/usr/local/cuda
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential git libgl1 libglib2.0-0 libopenmpi-dev openmpi-bin \
+      && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace/bevfusion-adapter
+
+# Keep the OpenMMLab 1.x API expected by this repository.  It is built from
+# source because no prebuilt mmcv-full 1.x wheel exists for torch 2.7/cu128.
+RUN python -m pip install --upgrade pip setuptools wheel && \
+    python -m pip install \
+      'numpy<2' Pillow==8.4.0 tqdm torchpack nuscenes-devkit \
+      mpi4py==3.0.3 numba==0.61.2 'yapf<0.41' && \
+    python -m pip install --no-build-isolation --no-binary mmcv-full \
+      mmcv-full==1.4.0 && \
+    python -m pip install mmdet==2.20.0
+
+COPY . .
+
+# Compile the repository's CUDA extensions specifically for sm_120.  Building
+# in the image makes incompatibilities explicit before an inference container
+# is started.
+RUN python setup.py develop
+RUN python -c "import torch, mmcv, mmdet, mmdet3d; assert 'sm_120' in torch.cuda.get_arch_list(); print(torch.__version__, torch.version.cuda, mmcv.__version__, mmdet.__version__)"
+
+CMD ["/bin/bash"]
