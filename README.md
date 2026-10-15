@@ -233,3 +233,6 @@ Giải thích luồng dữ liệu theo từng file và hàm cho đồng nghiệp
 [Luồng code VF6](docs/vf6-data-flow.md).
 Hướng dẫn thao tác kiểm thử và training:
 [Word](docs/vf6-test-train-guide.docx), [bản nguồn Markdown](docs/vf6-runbook.md).
+
+Chạy smoke inference checkpoint LiDAR-only nuScenes trên thư mục PCD chưa có
+label: [PCD pretrained inference](PCD_INFERENCE.md).
