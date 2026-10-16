@@ -1,0 +1,10 @@
+# Inference config for checkpoint/epoch_3.pth.
+# That checkpoint was trained before the VF6 no-velocity configuration and
+# therefore contains the TransFusion two-component velocity prediction head.
+model:
+  heads:
+    object:
+      common_heads:
+        vel: [2, 2]
+      bbox_coder:
+        code_size: 10

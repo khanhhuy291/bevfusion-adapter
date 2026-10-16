@@ -11,7 +11,8 @@ không phải đánh giá accuracy và không cần dựng bộ dữ liệu nuSc
 - Hệ trục phải là LiDAR/ego kiểu nuScenes: x trước, y trái, z lên, đơn vị mét.
 - Checkpoint phải đi cùng **đúng config lúc train**. Ví dụ checkpoint nuScenes
   10-class dùng `configs/nuscenes/det/transfusion/secfpn/lidar/voxelnet_0p075.yaml`;
-  checkpoint VF6 3-class `epoch_3.pth` dùng `configs/vf6/lidar.yaml`.
+  checkpoint VF6 3-class `epoch_3.pth` dùng `configs/vf6/lidar_epoch3.yaml`
+  vì checkpoint này có velocity head.
 
 Nếu PCD chưa ở đúng hệ trục, truyền ma trận 4x4 row-major bằng `--transform`.
 Phép đổi được áp dụng theo `xyz_out = R @ xyz_in + t`.
