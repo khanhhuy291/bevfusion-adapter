@@ -9,8 +9,9 @@ không phải đánh giá accuracy và không cần dựng bộ dữ liệu nuSc
 - PCD `DATA binary`, các field scalar `x y z intensity` kiểu float32.
 - Model nhận `[x, y, z, intensity, sweep_time_lag]`; công cụ tự thêm time lag 0.
 - Hệ trục phải là LiDAR/ego kiểu nuScenes: x trước, y trái, z lên, đơn vị mét.
-- Checkpoint phải đi cùng config 10-class gốc
-  `configs/nuscenes/det/transfusion/secfpn/lidar/voxelnet_0p075.yaml`.
+- Checkpoint phải đi cùng **đúng config lúc train**. Ví dụ checkpoint nuScenes
+  10-class dùng `configs/nuscenes/det/transfusion/secfpn/lidar/voxelnet_0p075.yaml`;
+  checkpoint VF6 3-class `epoch_3.pth` dùng `configs/vf6/lidar.yaml`.
 
 Nếu PCD chưa ở đúng hệ trục, truyền ma trận 4x4 row-major bằng `--transform`.
 Phép đổi được áp dụng theo `xyz_out = R @ xyz_in + t`.
@@ -66,11 +67,8 @@ compensation.
 
 ## Diễn giải kết quả
 
-Class output theo đúng thứ tự nuScenes:
-
-`car, truck, construction_vehicle, bus, trailer, barrier, motorcycle, bicycle, pedestrian, traffic_cone`.
-
-Box JSON có thứ tự `[x, y, z_bottom, length, width, height, yaw, vx, vy]` theo
-quy ước nội bộ của checkpoint. Dữ liệu mẫu hiện có intensity bằng 0 toàn bộ;
+Class output theo đúng `object_classes` của config đã dùng; chúng cũng được ghi
+vào `summary.json`. Box JSON theo quy ước nội bộ của checkpoint (có thể gồm
+hoặc không gồm velocity). Dữ liệu mẫu hiện có intensity bằng 0 toàn bộ;
 điều này không chặn smoke inference nhưng prediction có domain shift lớn và
 không nên dùng để kết luận chất lượng model.

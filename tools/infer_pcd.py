@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the official BEVFusion LiDAR detector on binary PCD frames.
+"""Run a BEVFusion LiDAR detector on binary PCD frames.
 
 This is an inference-only adapter for unlabelled single-frame point clouds. It
 does not pretend that arbitrary PCD data is a nuScenes dataset and it does not
@@ -108,11 +108,9 @@ def main():
         bev_dir.mkdir(parents=True, exist_ok=True)
 
     cfg = load_config(args.config)
-    expected_classes = ["car", "truck", "construction_vehicle", "bus", "trailer",
-                        "barrier", "motorcycle", "bicycle", "pedestrian", "traffic_cone"]
     classes = list(cfg.object_classes)
-    if classes != expected_classes:
-        raise SystemExit("This checkpoint adapter expects the official 10-class nuScenes order, got {}".format(classes))
+    if not classes:
+        raise SystemExit("Config must define a non-empty object_classes list")
     point_range = np.asarray(cfg.point_cloud_range, dtype=np.float64)
     transform = np.asarray(args.transform, dtype=np.float64).reshape(4, 4) if args.transform else None
     model = build_detector(cfg, args.checkpoint, args.device)
