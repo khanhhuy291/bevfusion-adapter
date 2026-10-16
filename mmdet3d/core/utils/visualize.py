@@ -25,6 +25,14 @@ OBJECT_PALETTE = {
     "traffic_cone": (47, 79, 79),
 }
 
+DEFAULT_OBJECT_COLOR = (192, 192, 192)
+
+
+def _object_color(name: str) -> Tuple[int, int, int]:
+    """Return a palette colour without requiring a nuScenes class spelling."""
+    normalized = str(name).lower().replace(" ", "_")
+    return OBJECT_PALETTE.get(normalized, DEFAULT_OBJECT_COLOR)
+
 MAP_PALETTE = {
     "drivable_area": (166, 206, 227),
     "road_segment": (31, 120, 180),
@@ -99,7 +107,7 @@ def visualize_camera(
                     canvas,
                     coords[index, start].astype(np.int),
                     coords[index, end].astype(np.int),
-                    color or OBJECT_PALETTE[name],
+                    color or _object_color(name),
                     thickness,
                     cv2.LINE_AA,
                 )
@@ -147,7 +155,7 @@ def visualize_lidar(
                 coords[index, :, 0],
                 coords[index, :, 1],
                 linewidth=thickness,
-                color=np.array(color or OBJECT_PALETTE[name]) / 255,
+                color=np.array(color or _object_color(name)) / 255,
             )
 
     mmcv.mkdir_or_exist(os.path.dirname(fpath))
